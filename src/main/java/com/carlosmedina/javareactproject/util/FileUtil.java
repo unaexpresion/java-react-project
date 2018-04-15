@@ -7,7 +7,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Calendar;
+import java.util.Date;
 
 public class FileUtil {
 
@@ -17,6 +22,7 @@ public class FileUtil {
     private static String extension;
     public static String inputString;
     public static String outputString;
+    public static String statusProcess;
 
     public static final String DIRECTORY = File.separator + "TempJavaReactFolder" + File.separator;
 
@@ -69,6 +75,14 @@ public class FileUtil {
         FileUtil.outputString = outputString;
     }
 
+    public static String getStatusProcess() {
+        return statusProcess;
+    }
+
+    public static void setStatusProcess(String statusProcess) {
+        FileUtil.statusProcess = statusProcess;
+    }
+
     public static boolean isValidExtension() {
         if (FileUtil.originalFilename.indexOf(".") < 0) {
             return false;
@@ -98,6 +112,10 @@ public class FileUtil {
 
     public static String getFilename(String fileType) {
         return fileType.concat("_").concat(FileUtil.dateTimeStr).concat(".").concat(FileUtil.extension).toUpperCase();
+    }
+
+    public static String getUrlFile(String fileType) {
+        return FileUtil.getFilename(fileType);
     }
 
     public static Path createFile(String fileType) throws IOException {
@@ -164,6 +182,28 @@ public class FileUtil {
             if(Character.digit(s.charAt(i),radix) < 0) return false;
         }
         return true;
+    }
+
+    public static Date getProcessDate() {
+        Date date = new Date(); // your date
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        int year = cal.get(Calendar.YEAR);
+        int month = cal.get(Calendar.MONTH+1);
+        int day = cal.get(Calendar.DAY_OF_MONTH);
+
+        String dateInString = String.valueOf(year).concat("-").concat(String.valueOf(month))
+                .concat("-").concat(String.valueOf(day));
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            return formatter.parse(dateInString);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return new Date();
+
     }
 
 

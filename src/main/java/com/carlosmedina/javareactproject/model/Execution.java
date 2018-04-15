@@ -11,8 +11,8 @@ public class Execution {
     private Long id;
     private long executorDNI;
     private Date executionDate;
-    private String executionInput;
-    private String executionOutput;
+    private String urlFile;
+    private String statusProcess;
 
     @Id
     @GeneratedValue
@@ -40,19 +40,19 @@ public class Execution {
         this.executionDate = executionDate;
     }
 
-    public String getExecutionInput() {
-        return executionInput;
+    public String getUrlFile() {
+        return urlFile;
     }
 
-    public void setExecutionInput(String executionInput) {
-        this.executionInput = executionInput;
+    public void setUrlFile(String urlFile) {
+        this.urlFile = urlFile;
     }
 
-    public String getExecutionOutput() {
-        return executionOutput;
+    public String getStatusProcess() {
+        return statusProcess;
     }
 
-    public void setExecutionOutput(String executionOutput) {
-        this.executionOutput = executionOutput;
+    public void setStatusProcess(String statusProcess) {
+        this.statusProcess = statusProcess;
     }
 }

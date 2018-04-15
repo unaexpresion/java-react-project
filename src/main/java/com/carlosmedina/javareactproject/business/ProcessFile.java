@@ -230,6 +230,7 @@ public class ProcessFile {
 
             FileUtil.saveFile(String.valueOf(outputText).getBytes(), "OUTPUT");
             FileUtil.setOutputString(outputText.toString());
+            FileUtil.setStatusProcess("EXITOSO");
 
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
