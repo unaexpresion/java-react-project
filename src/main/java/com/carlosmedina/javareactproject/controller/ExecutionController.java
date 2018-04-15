@@ -5,7 +5,11 @@ import com.carlosmedina.javareactproject.business.ProcessFile;
 import com.carlosmedina.javareactproject.model.Execution;
 import com.carlosmedina.javareactproject.repository.ExecutionJpaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,18 +30,17 @@ public class ExecutionController {
     @Autowired
     private ExecutionJpaRepository executionJpaRepository;
 
-    //private FileUtil fileUtil;
-
     @GetMapping(value = "/all")
     public List<Execution> findAll() {
         return executionJpaRepository.findAll();
     }
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @RequestMapping(value = "/executeFile",
             headers = "content-type=multipart/*",
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, String> executeInputFile(@RequestParam(value = "file", required = true) MultipartFile multipartFile,
+    public ResponseEntity<InputStreamResource> executeInputFile(@RequestParam(value = "file", required = true) MultipartFile multipartFile,
                                                 HttpServletResponse httpServletResponse) throws IOException {
 
         Map<String, String> response = new HashMap<>();
@@ -46,15 +49,15 @@ public class ExecutionController {
             FileUtil.init(multipartFile);
             ProcessFile processFile = new ProcessFile(multipartFile);
             if (processFile.validateFileResponse().get("status").equalsIgnoreCase("error")) {
-                return processFile.validateFileResponse();
+                //return processFile.validateFileResponse();
             }
             processFile.processInputFile();
-            //this.load();
-            this.downloadOutputFile(httpServletResponse);
+            System.out.println("algo aqui");
+            return this.downloadOutputFile(httpServletResponse);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return response;
+        return null;
     }
 
     @RequestMapping(value = "/load", method = RequestMethod.POST)
@@ -62,21 +65,16 @@ public class ExecutionController {
         executionJpaRepository.save(execution);
     }
 
-    public void downloadOutputFile(HttpServletResponse response) throws IOException {
+    public ResponseEntity<InputStreamResource> downloadOutputFile(HttpServletResponse response) throws IOException {
         File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename("OUTPUT"));
 
-        response.setContentType("text/plain");
-        response.setHeader("Content-Disposition", "attachment;filename=" + file.getName());
-        BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(file));
-        BufferedOutputStream outStream = new BufferedOutputStream(response.getOutputStream());
+        InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
 
-        byte[] buffer = new byte[1024];
-        int bytesRead = 0;
-        while ((bytesRead = inStream.read(buffer)) != -1) {
-            outStream.write(buffer, 0, bytesRead);
-        }
-        outStream.flush();
-        inStream.close();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment;filename=" + file.getName())
+                .contentType(MediaType.TEXT_PLAIN).contentLength(file.length())
+                .body(resource);
     }
 
 }
