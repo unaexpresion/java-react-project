@@ -1,6 +1,6 @@
 package com.carlosmedina.javareactproject.controller;
 
-import com.carlosmedina.javareactproject.Util.FileUtil;
+import com.carlosmedina.javareactproject.util.FileUtil;
 import com.carlosmedina.javareactproject.business.ProcessFile;
 import com.carlosmedina.javareactproject.model.Execution;
 import com.carlosmedina.javareactproject.repository.ExecutionJpaRepository;
@@ -9,13 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +37,8 @@ public class ExecutionController {
             headers = "content-type=multipart/*",
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public Map<String, String> executeInputFile(@RequestParam(value = "file", required = true) MultipartFile multipartFile) throws IOException {
+    public Map<String, String> executeInputFile(@RequestParam(value = "file", required = true) MultipartFile multipartFile,
+                                                HttpServletResponse httpServletResponse) throws IOException {
 
         Map<String, String> response = new HashMap<>();
 
@@ -52,6 +49,8 @@ public class ExecutionController {
                 return processFile.validateFileResponse();
             }
             processFile.processInputFile();
+            //this.load();
+            this.downloadOutputFile(httpServletResponse);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -59,13 +58,25 @@ public class ExecutionController {
     }
 
     @RequestMapping(value = "/load", method = RequestMethod.POST)
-    public String load(@RequestBody final Execution execution) {
+    private void load(@RequestBody final Execution execution) {
         executionJpaRepository.save(execution);
-        return "aa";
     }
 
-    private Path createOutputFile() {
-        return null;
+    public void downloadOutputFile(HttpServletResponse response) throws IOException {
+        File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename("OUTPUT"));
+
+        response.setContentType("text/plain");
+        response.setHeader("Content-Disposition", "attachment;filename=" + file.getName());
+        BufferedInputStream inStream = new BufferedInputStream(new FileInputStream(file));
+        BufferedOutputStream outStream = new BufferedOutputStream(response.getOutputStream());
+
+        byte[] buffer = new byte[1024];
+        int bytesRead = 0;
+        while ((bytesRead = inStream.read(buffer)) != -1) {
+            outStream.write(buffer, 0, bytesRead);
+        }
+        outStream.flush();
+        inStream.close();
     }
 
 }

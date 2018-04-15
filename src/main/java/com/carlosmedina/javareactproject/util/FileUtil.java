@@ -1,4 +1,4 @@
-package com.carlosmedina.javareactproject.Util;
+package com.carlosmedina.javareactproject.util;
 
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,14 +15,14 @@ public class FileUtil {
     private static String dateTimeStr;
     private static MultipartFile multipartFile;
     private static String extension;
-    private static final String DIRECTORY = File.separator + "TempJavaReactFolder" + File.separator;
+    public static final String DIRECTORY = File.separator + "TempJavaReactFolder" + File.separator;
 
     public static void init(MultipartFile multipartFile) throws IOException {
         FileUtil.multipartFile = multipartFile;
         FileUtil.originalFilename = multipartFile.getOriginalFilename();
         FileUtil.dateTimeStr = LocalDateTime.now().toString().replace(":","").replace("-","");
         FileUtil.extension = FileUtil.findExtension();
-        FileUtil.saveInputFile(multipartFile.getBytes());
+        FileUtil.saveFile(multipartFile.getBytes(), "INPUT");
     }
 
     public void setOriginalFilename(String originalFilename) {
@@ -76,12 +76,12 @@ public class FileUtil {
         }
     }
 
-    private static String generateName(String fileType) {
+    public static String getFilename(String fileType) {
         return fileType.concat("_").concat(FileUtil.dateTimeStr).concat(".").concat(FileUtil.extension).toUpperCase();
     }
 
     public static Path createFile(String fileType) throws IOException {
-        Path path = Paths.get(DIRECTORY + FileUtil.generateName(fileType));
+        Path path = Paths.get(DIRECTORY + FileUtil.getFilename(fileType));
         System.out.println(Files.isDirectory(Paths.get(DIRECTORY)));
         System.out.println(Files.notExists(path));
 
@@ -97,9 +97,9 @@ public class FileUtil {
         return null;
     }
 
-    private static void saveInputFile(byte[] content) {
+    public static void saveFile(byte[] content, String fileType) {
         try {
-            Path inputFile = FileUtil.createFile("INPUT");
+            Path inputFile = FileUtil.createFile(fileType);
             if (Files.isWritable(inputFile)) {
                 Files.write(inputFile, content);
             }

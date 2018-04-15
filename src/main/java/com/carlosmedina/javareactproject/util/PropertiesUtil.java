@@ -1,4 +1,4 @@
-package com.carlosmedina.javareactproject.Util;
+package com.carlosmedina.javareactproject.util;
 
 public class PropertiesUtil {
 

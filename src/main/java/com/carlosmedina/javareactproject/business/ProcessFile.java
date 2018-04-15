@@ -1,7 +1,7 @@
 package com.carlosmedina.javareactproject.business;
 
-import com.carlosmedina.javareactproject.Util.FileUtil;
-import com.carlosmedina.javareactproject.Util.PropertiesUtil;
+import com.carlosmedina.javareactproject.util.FileUtil;
+import com.carlosmedina.javareactproject.util.PropertiesUtil;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -60,7 +60,7 @@ public class ProcessFile {
         int iterationValue = 0;
         List<Integer> higherArr = new ArrayList<>();
         List<Integer> lessArr = new ArrayList<>();
-        //int highestLess = 0;
+        StringBuilder outputText = new StringBuilder();
         int numberPackagesNeeded = 0;
 
         try {
@@ -94,7 +94,7 @@ public class ProcessFile {
                 if (iterationValue == 1) {
                     packagesNumberForCurrentDay = packageWeight;
                     dayNumber++;
-                    System.out.println(packagesNumberForCurrentDay);
+                    //System.out.println(packagesNumberForCurrentDay);
                     higherArr.clear();
                     lessArr.clear();
                     //generalArrayPos = this.prepareArrayList(packagesNumberForCurrentDay);
@@ -123,7 +123,6 @@ public class ProcessFile {
 
                     // Se retornan a cero las variables de control para reiniciar a un nuevo día de trabajo
                     if (packagesNumberForCurrentDay == iterationByDay) {
-                        iterationByDay = 0;
                         iterationValue = 0;
 
                         int packagesNumberIteration = 0;
@@ -172,8 +171,15 @@ public class ProcessFile {
 
                             /* Validar que la cantidad de paquetes necesarios a añadir sean los suficientes
                             realizar otro viaje */
-                            if (highestLessArrPosList.size() + lesserLessArrPosList.size()
-                                    + numberPackagesNeeded >=  packagesNumberForCurrentDay) {
+                            if ((highestLessArrPosList.size() + lesserLessArrPosList.size()
+                                    + numberPackagesNeeded > packagesNumberForCurrentDay)
+                                    || (highestLessArrPosList.size() + lesserLessArrPosList.size() == lessArr.size())) {
+                                if (travelNumbers == 0) travelNumbers++;
+                                break;
+                            }
+
+                            if (numberPackagesNeeded > (lessArr.size() - (highestLessArrPosList.size() + lesserLessArrPosList.size()))) {
+                                travelNumbers++;
                                 break;
                             }
 
@@ -220,15 +226,23 @@ public class ProcessFile {
 
                         } // Cierre del while (packagesNumberForCurrentDay >= packagesNumberIteration)
 
-                        // Escribir viaje en el archivo OUTPUT
-                        System.out.println("Case #" + dayNumber + " : " + travelNumbers);
-                        travelNumbers = 0;
-
                     }
 
                 }
 
+                // Se recogieron todos los paquetes del día
+                if (packagesNumberForCurrentDay == iterationByDay) {
+                    // Escribir viaje en el archivo OUTPUT
+                    System.out.println("Case #" + dayNumber + " : " + travelNumbers);
+                    outputText.append("Case #" + dayNumber + " : " + travelNumbers).append(System.lineSeparator());
+                    travelNumbers = 0;
+                    // Iteración de viajes por día regresa a 0
+                    iterationByDay = 0;
+                }
+
             }
+
+            FileUtil.saveFile(String.valueOf(outputText).getBytes(), "OUTPUT");
 
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
