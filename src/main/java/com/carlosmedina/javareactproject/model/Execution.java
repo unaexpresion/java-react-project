@@ -9,7 +9,7 @@ import java.util.Date;
 public class Execution {
 
     private Long id;
-    private int executorDNI;
+    private long executorDNI;
     private Date executionDate;
     private String executionInput;
     private String executionOutput;
@@ -24,11 +24,11 @@ public class Execution {
         this.id = id;
     }
 
-    public int getExecutorDNI() {
+    public long getExecutorDNI() {
         return executorDNI;
     }
 
-    public void setExecutorDNI(int executorDNI) {
+    public void setExecutorDNI(long executorDNI) {
         this.executorDNI = executorDNI;
     }
 

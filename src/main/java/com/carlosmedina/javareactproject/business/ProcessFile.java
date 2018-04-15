@@ -21,21 +21,7 @@ public class ProcessFile {
         this.multipartFile = multipartFile;
     }
 
-    public boolean isInteger(String s) {
-        return isInteger(s,10);
-    }
 
-    public boolean isInteger(String s, int radix) {
-        if(s.isEmpty()) return false;
-        for(int i = 0; i < s.length(); i++) {
-            if(i == 0 && s.charAt(i) == '-') {
-                if(s.length() == 1) return false;
-                else continue;
-            }
-            if(Character.digit(s.charAt(i),radix) < 0) return false;
-        }
-        return true;
-    }
 
     private boolean isWorkDaysNumberValid(int number) {
         return number >= 1 && number <= PropertiesUtil.MAXIMUM_WORKDAYSNUMBER;
@@ -71,7 +57,7 @@ public class ProcessFile {
 
             // La primera línea, se refiere a la cantidad de días de trabajo
             String firstLine = br.readLine();
-            if (firstLine == null || !this.isInteger(firstLine)) {
+            if (firstLine == null || !FileUtil.isInteger(firstLine)) {
                 System.err.println("El valor obtenido para el Número de días de trabajo no es un entero");
                 return null; // RETORNAR MENSAJE EN MAP
             }
@@ -87,7 +73,7 @@ public class ProcessFile {
             int travelNumbers = 0;
             while ((line = br.readLine()) != null) {
                 iterationValue++;
-                if (this.isInteger(line)) {
+                if (FileUtil.isInteger(line)) {
                     packageWeight = Integer.parseInt(line);
                 }
 
@@ -243,6 +229,7 @@ public class ProcessFile {
             }
 
             FileUtil.saveFile(String.valueOf(outputText).getBytes(), "OUTPUT");
+            FileUtil.setOutputString(outputText.toString());
 
         } catch (IOException ex) {
             System.err.println(ex.getMessage());
@@ -257,13 +244,19 @@ public class ProcessFile {
 
         if (!FileUtil.isValidExtension()) {
             response.put("status", "error");
-            response.put("message", "El archivo cargado no parece tener el formato adecuado, por favor agregue un archivo con formato adecuado (.txt)");
+            response.put("message", "El archivo cargado no parece tener el formato adecuado, por favor agregue un archivo con formato adecuado (.txt).");
             return response;
         }
 
         if (FileUtil.isEmptyFile()){
             response.put("status", "error");
-            response.put("message", "El archivo está vacío, por favor agregue un archivo con contenido");
+            response.put("message", "El archivo está vacío, por favor agregue un archivo con contenido.");
+            return response;
+        }
+
+        if (FileUtil.hasInvalidDigits()) {
+            response.put("status", "error");
+            response.put("message", "Al parecer algunos de los valores del archivo no corresponden con dígitos de tipo entero.");
             return response;
         }
 

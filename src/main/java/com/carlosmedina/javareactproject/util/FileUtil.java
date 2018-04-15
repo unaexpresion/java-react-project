@@ -2,8 +2,8 @@ package com.carlosmedina.javareactproject.util;
 
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +15,9 @@ public class FileUtil {
     private static String dateTimeStr;
     private static MultipartFile multipartFile;
     private static String extension;
+    public static String inputString;
+    public static String outputString;
+
     public static final String DIRECTORY = File.separator + "TempJavaReactFolder" + File.separator;
 
     public static void init(MultipartFile multipartFile) throws IOException {
@@ -22,6 +25,7 @@ public class FileUtil {
         FileUtil.originalFilename = multipartFile.getOriginalFilename();
         FileUtil.dateTimeStr = LocalDateTime.now().toString().replace(":","").replace("-","");
         FileUtil.extension = FileUtil.findExtension();
+        FileUtil.inputString = new String(multipartFile.getBytes(), StandardCharsets.UTF_8);
         FileUtil.saveFile(multipartFile.getBytes(), "INPUT");
     }
 
@@ -47,6 +51,22 @@ public class FileUtil {
 
     public void setExtension(String extension) {
         this.extension = extension;
+    }
+
+    public static String getInputString() {
+        return inputString;
+    }
+
+    public static void setInputString(String inputString) {
+        FileUtil.inputString = inputString;
+    }
+
+    public static String getOutputString() {
+        return outputString;
+    }
+
+    public static void setOutputString(String outputString) {
+        FileUtil.outputString = outputString;
     }
 
     public static boolean isValidExtension() {
@@ -106,6 +126,44 @@ public class FileUtil {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static boolean hasInvalidDigits() {
+        InputStream is = null;
+        BufferedReader br = null;
+        try {
+            is = FileUtil.multipartFile.getInputStream();
+            br = new BufferedReader(new InputStreamReader(is));
+
+            String line;
+            while ((line = br.readLine()) != null) {
+                // Valida que cada número en el archivo sea un entero
+                if(!FileUtil.isInteger(line)) {
+                    return true;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public static boolean isInteger(String s) {
+        return FileUtil.isInteger(s,10);
+    }
+
+    public static boolean isInteger(String s, int radix) {
+        if(s.isEmpty()) return false;
+        for(int i = 0; i < s.length(); i++) {
+            if(i == 0 && s.charAt(i) == '-') {
+                if(s.length() == 1) return false;
+                else continue;
+            }
+            if(Character.digit(s.charAt(i),radix) < 0) return false;
+        }
+        return true;
     }
 
 

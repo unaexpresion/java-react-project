@@ -5,7 +5,6 @@ import com.carlosmedina.javareactproject.business.ProcessFile;
 import com.carlosmedina.javareactproject.model.Execution;
 import com.carlosmedina.javareactproject.repository.ExecutionJpaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,9 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,6 @@ import java.util.Map;
 public class ExecutionController {
 
     // TODO: todas las cadenas de respuestas colocarlas en archivo separado
-    // TODO: separar cada validacion del archivo en métodos diferentes
 
     @Autowired
     private ExecutionJpaRepository executionJpaRepository;
@@ -40,33 +38,56 @@ public class ExecutionController {
             headers = "content-type=multipart/*",
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<InputStreamResource> executeInputFile(@RequestParam(value = "file", required = true) MultipartFile multipartFile,
-                                                HttpServletResponse httpServletResponse) throws IOException {
-
-        Map<String, String> response = new HashMap<>();
+    public ResponseEntity<InputStreamResource> executeInputFile(
+            @RequestParam(value = "file", required = true) MultipartFile multipartFile,
+            @RequestParam(value = "executorDNI") String executorDNI) throws IOException {
 
         try {
             FileUtil.init(multipartFile);
             ProcessFile processFile = new ProcessFile(multipartFile);
-            if (processFile.validateFileResponse().get("status").equalsIgnoreCase("error")) {
-                //return processFile.validateFileResponse();
+
+            // Inicia proceso de validación del archivo de entrada
+            Map<String, String> processValidation = new HashMap<>();
+            processValidation = processFile.validateFileResponse();
+            if (processValidation.get("status").equalsIgnoreCase("error")) {
+                return this.sendErrorFile(processValidation.get("message"));
             }
+
             processFile.processInputFile();
-            System.out.println("algo aqui");
-            return this.downloadOutputFile(httpServletResponse);
+
+            Execution execution = new Execution();
+            execution.setExecutorDNI(Long.parseLong(executorDNI));
+            execution.setExecutionDate(new Date());
+            execution.setExecutionInput(FileUtil.getInputString());
+            execution.setExecutionOutput(FileUtil.getOutputString());
+            this.load(execution);
+            return this.downloadOutputFile();
         } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    @RequestMapping(value = "/load", method = RequestMethod.POST)
     private void load(@RequestBody final Execution execution) {
         executionJpaRepository.save(execution);
     }
 
-    public ResponseEntity<InputStreamResource> downloadOutputFile(HttpServletResponse response) throws IOException {
+    public ResponseEntity<InputStreamResource> downloadOutputFile() throws IOException {
         File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename("OUTPUT"));
+
+        InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment;filename=" + file.getName())
+                .contentType(MediaType.TEXT_PLAIN).contentLength(file.length())
+                .body(resource);
+    }
+
+    public ResponseEntity<InputStreamResource> sendErrorFile(String response) throws IOException {
+
+        FileUtil.saveFile(response.getBytes(StandardCharsets.UTF_8),"OUTPUT_WITH_ERRORS");
+        File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename("OUTPUT_WITH_ERRORS"));
 
         InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
 
