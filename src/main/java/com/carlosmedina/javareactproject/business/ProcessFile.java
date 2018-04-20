@@ -12,8 +12,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ProcessFile {
+
+    private static final Logger LOGGER = Logger.getLogger("com.carlosmedina.javareactproject.business.ProcessFile");
 
     private MultipartFile multipartFile;
 
@@ -21,28 +25,12 @@ public class ProcessFile {
         this.multipartFile = multipartFile;
     }
 
-
-
-    private boolean isWorkDaysNumberValid(int number) {
-        return number >= 1 && number <= PropertiesUtil.MAXIMUM_WORKDAYSNUMBER;
-    }
-
-    private boolean isItemNumbersValueValid(int number) {
-        return number >= 1 && number <= PropertiesUtil.MAXIMUM_ITEMNUMBERS_VALUE;
-    }
-
-    private boolean isItemWeightValueValid(int number) {
-        return number >= 1 && number <= PropertiesUtil.MAXIMUM_ITEMWEIGHT_VALUE;
-    }
-
     public Map<String, String> processInputFile() {
 
         BufferedReader br;
-        int workDaysNumber = 0;
         int packagesNumberForCurrentDay = 0;
         int iterationByDay = 0;
         int dayNumber = 0;
-        List<Integer> packagesInCurrentDay = new ArrayList<>();
         int iterationValue = 0;
         List<Integer> higherArr = new ArrayList<>();
         List<Integer> lessArr = new ArrayList<>();
@@ -57,17 +45,7 @@ public class ProcessFile {
 
             // La primera línea, se refiere a la cantidad de días de trabajo
             String firstLine = br.readLine();
-            if (firstLine == null || !FileUtil.isInteger(firstLine)) {
-                System.err.println("El valor obtenido para el Número de días de trabajo no es un entero");
-                return null; // RETORNAR MENSAJE EN MAP
-            }
-
-            workDaysNumber = Integer.parseInt(firstLine);
-
-            if (!this.isWorkDaysNumberValid(workDaysNumber)) {
-                System.err.println("El número de días trabajados supera el límite de: " + PropertiesUtil.MAXIMUM_WORKDAYSNUMBER);
-                return null; // RETORNAR MENSAJE EN MAP
-            }
+            LOGGER.log(Level.INFO, "The first line is: " + firstLine);
 
             List<Integer> generalArray = new ArrayList<>();
             int travelNumbers = 0;
@@ -80,17 +58,14 @@ public class ProcessFile {
                 if (iterationValue == 1) {
                     packagesNumberForCurrentDay = packageWeight;
                     dayNumber++;
-                    //System.out.println(packagesNumberForCurrentDay);
                     higherArr.clear();
                     lessArr.clear();
-                    //generalArrayPos = this.prepareArrayList(packagesNumberForCurrentDay);
                     continue;
                 }
 
 
                 iterationByDay++;
                 if (packagesNumberForCurrentDay >= iterationByDay) {
-                    //System.out.println("Evaluando día: " + dayNumber);
                     // REALIZAR OPERACION
 
 
@@ -111,19 +86,13 @@ public class ProcessFile {
                     if (packagesNumberForCurrentDay == iterationByDay) {
                         iterationValue = 0;
 
-                        int packagesNumberIteration = 0;
-                        //int[] highestLessArrPos = this.prepareArray(lessArr.size());
                         List<Integer> highestLessArrPosList = new ArrayList<>();
-                        //int[] lesserLessArrPos = this.prepareArray(lessArr.size());
-                        List<Integer> lesserLessArrPosList = new ArrayList<>(); //this.prepareArrayList(lessArr.size());
+                        List<Integer> lesserLessArrPosList = new ArrayList<>();
 
-                        //while (packagesNumberForCurrentDay > packagesNumberIteration) {
-                        int arrayLessIteration = -1;
-                        for (int arrayLessValue: lessArr) {
+                        for (int ignored : lessArr) {
                             if (highestLessArrPosList.size() + lesserLessArrPosList.size() == lessArr.size()) {
                                 break;
                             }
-                            arrayLessIteration++;
                             // Terminó la cantidad de paquetes en el día iterado
                             // Se realizan las operaciones para ordenar estratégicamente los paquetes
 
@@ -133,10 +102,8 @@ public class ProcessFile {
                             int highestLess = 0;
                             for (int higher : lessArr) {
                                 highestLessIteration++;
-                                if (this.isValueInArr(highestLessArrPosList, highestLessIteration)) {
-                                    continue;
-                                }
-                                if (this.isValueInArr(lesserLessArrPosList, highestLessIteration)) {
+                                if (this.isValueInArr(highestLessArrPosList, highestLessIteration)
+                                        || this.isValueInArr(lesserLessArrPosList, highestLessIteration)) {
                                     continue;
                                 }
                                 if (higher > highestLess) {
@@ -148,12 +115,13 @@ public class ProcessFile {
                             }
 
                             // Guardar en un arreglo las posiciones de los mayores de los menores que se han tratado
-                            //highestLessArrPos[packagesNumberIteration] = highestLessPos;
                             highestLessArrPosList.add(highestLessPos);
 
                             /* Calcular cuántos paquetes necesarios se pueden añadir para que el producto del mayor de los menores
                             por la cantidad de paquetes necesarios a añadir llegue o pase las 50 libras. */
-                            numberPackagesNeeded = this.packagesNeededForMinimunPounds(highestLess);
+                            if (highestLess > 0) {
+                                numberPackagesNeeded = this.packagesNeededForMinimunPounds(highestLess);
+                            }
 
                             /* Validar que la cantidad de paquetes necesarios a añadir sean los suficientes
                             realizar otro viaje */
@@ -185,10 +153,8 @@ public class ProcessFile {
                                 lesserLess = highestLess;
                                 for (int less : lessArr) {
                                     lesserLessIteration++;
-                                    if (this.isValueInArr(highestLessArrPosList, lesserLessIteration)) {
-                                        continue;
-                                    }
-                                    if (this.isValueInArr(lesserLessArrPosList, lesserLessIteration)) {
+                                    if (this.isValueInArr(highestLessArrPosList, lesserLessIteration)
+                                            || this.isValueInArr(lesserLessArrPosList, lesserLessIteration)) {
                                         continue;
                                     }
                                     if (lesserLess >= less) {
@@ -196,13 +162,11 @@ public class ProcessFile {
                                         lesserLess = less;
                                     }
                                 }
-                                //lesserLessArrPos[packagesNumberIteration] = lesserLessPos;
                                 lesserLessArrPosList.add(lesserLessPos);
-                                //generalArrayPos.add(lesserLess);
                                 numberPackagesNeededIteration++;
                             }
 
-                            int sumPositions = this.sumOfPositions(packagesNumberForCurrentDay, higherArr,
+                            int sumPositions = this.sumOfPositions(higherArr,
                                     highestLessArrPosList, lesserLessArrPosList);
 
                             if (packagesNumberForCurrentDay >= sumPositions) {
@@ -210,7 +174,7 @@ public class ProcessFile {
                             }
 
 
-                        } // Cierre del while (packagesNumberForCurrentDay >= packagesNumberIteration)
+                        } // Cierre del while
 
                     }
 
@@ -219,7 +183,6 @@ public class ProcessFile {
                 // Se recogieron todos los paquetes del día
                 if (packagesNumberForCurrentDay == iterationByDay) {
                     // Escribir viaje en el archivo OUTPUT
-                    System.out.println("Case #" + dayNumber + " : " + travelNumbers);
                     outputText.append("Case #" + dayNumber + " : " + travelNumbers).append(System.lineSeparator());
                     travelNumbers = 0;
                     // Iteración de viajes por día regresa a 0
@@ -232,10 +195,8 @@ public class ProcessFile {
             FileUtil.setOutputString(outputText.toString());
             FileUtil.setStatusProcess("EXITOSO");
 
-        } catch (IOException ex) {
-            System.err.println(ex.getMessage());
-        } catch (NumberFormatException ex) {
-            System.err.println(ex.getMessage());
+        } catch (IOException | NumberFormatException ex) {
+            LOGGER.log(Level.INFO, ex.getMessage());
         }
         return null;
     }
@@ -244,59 +205,39 @@ public class ProcessFile {
         Map<String, String> response = new HashMap<>();
 
         if (!FileUtil.isValidExtension()) {
-            response.put("status", "error");
-            response.put("message", "El archivo cargado no parece tener el formato adecuado, por favor agregue un archivo con formato adecuado (.txt).");
+            response.put(PropertiesUtil.STATUS, PropertiesUtil.ERROR);
+            response.put(PropertiesUtil.MESSAGE, "El archivo cargado no parece tener el formato adecuado, por favor agregue un archivo con formato adecuado (.txt).");
             return response;
         }
 
         if (FileUtil.isEmptyFile()){
-            response.put("status", "error");
-            response.put("message", "El archivo está vacío, por favor agregue un archivo con contenido.");
+            response.put(PropertiesUtil.STATUS, PropertiesUtil.ERROR);
+            response.put(PropertiesUtil.MESSAGE, "El archivo está vacío, por favor agregue un archivo con contenido.");
             return response;
         }
 
         if (FileUtil.hasInvalidDigits()) {
-            response.put("status", "error");
-            response.put("message", "Al parecer algunos de los valores del archivo no corresponden con dígitos de tipo entero.");
+            response.put(PropertiesUtil.STATUS, PropertiesUtil.ERROR);
+            response.put(PropertiesUtil.MESSAGE, "Al parecer algunos de los valores del archivo no corresponden con dígitos de tipo entero.");
             return response;
         }
 
-        response.put("status", "success");
+        response.put(PropertiesUtil.STATUS, PropertiesUtil.SUCCESS);
 
         return response;
     }
 
     private int packagesNeededForMinimunPounds(int number) {
-        if (PropertiesUtil.MINIMUM_POUNDS_VALUE % number == 0) {
-            return (PropertiesUtil.MINIMUM_POUNDS_VALUE / number) - 1;
-        } else {
-            return PropertiesUtil.MINIMUM_POUNDS_VALUE / number;
-        }
-    }
-
-    private int[] prepareArray(int size) {
-        int[] arr = new int[size];
-        for (int i = 0; i < size; i++) {
-            arr[i] = -1;
-        }
-        return arr;
-    }
-
-    private List<Integer> prepareArrayList(int num) {
-        List<Integer> list = new ArrayList<>();
-        for (int i = 0; i < num; i++) {
-            list.add(-1);
-        }
-        return list;
-    }
-
-    private boolean isValueInArr(int[] arr, int number) {
-        for (int i = 0; i < arr.length; i++) {
-            if (arr[i] == number) {
-                return true;
+        try {
+            if (PropertiesUtil.MINIMUM_POUNDS_VALUE % number == 0) {
+                return (PropertiesUtil.MINIMUM_POUNDS_VALUE / number) - 1;
+            } else {
+                return PropertiesUtil.MINIMUM_POUNDS_VALUE / number;
             }
+        } catch (ArithmeticException ex) {
+            LOGGER.log(Level.INFO, "Excepción lanzada al ejecutar división entre cero");
+            return 0;
         }
-        return false;
     }
 
     private boolean isValueInArr(List<Integer> arr, int number) {
@@ -308,23 +249,9 @@ public class ProcessFile {
         return false;
     }
 
-    private int arrayPositionsOccupied(int[] arrA, int[] arrB) {
-        int countPosA = 0, countPosB = 0;
-        for (int ia = 0; ia < arrA.length; ia++) {
-            if (arrA[ia] != -1) {
-                countPosA++;
-            }
-        }
-        for (int ib = 0; ib < arrB.length; ib++) {
-            if (arrB[ib] != -1) {
-                countPosB++;
-            }
-        }
-        return countPosA + countPosB;
-    }
-
     private int arrayPositionsOccupied(List<Integer> arrA, List<Integer> arrB) {
-        int countPosA = 0, countPosB = 0;
+        int countPosA = 0;
+        int countPosB = 0;
         for (int numA : arrA) {
             if (numA != -1) {
                 countPosA++;
@@ -339,16 +266,9 @@ public class ProcessFile {
         return countPosA + countPosB;
     }
 
-    private int sumOfPositions(int packagesNumber, List<Integer> higherArr, int[] highestLessArrPos, int[] lesserLessArrPos) {
+    private int sumOfPositions(List<Integer> higherArr, List<Integer> highestLessArrPos, List<Integer> lesserLessArrPos) {
         int positionsOccupied = this.arrayPositionsOccupied(highestLessArrPos, lesserLessArrPos);
-        int totalPositions = higherArr.size() + positionsOccupied;
-        return totalPositions;
-    }
-
-    private int sumOfPositions(int packagesNumber, List<Integer> higherArr, List<Integer> highestLessArrPos, List<Integer> lesserLessArrPos) {
-        int positionsOccupied = this.arrayPositionsOccupied(highestLessArrPos, lesserLessArrPos);
-        int totalPositions = higherArr.size() + positionsOccupied;
-        return totalPositions;
+        return higherArr.size() + positionsOccupied;
     }
 
 }

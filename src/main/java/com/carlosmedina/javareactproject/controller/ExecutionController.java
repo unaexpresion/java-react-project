@@ -4,6 +4,7 @@ import com.carlosmedina.javareactproject.util.FileUtil;
 import com.carlosmedina.javareactproject.business.ProcessFile;
 import com.carlosmedina.javareactproject.model.Execution;
 import com.carlosmedina.javareactproject.repository.ExecutionJpaRepository;
+import com.carlosmedina.javareactproject.util.PropertiesUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -14,15 +15,17 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/execution")
 @CrossOrigin(origins = "http://localhost:3000")
 public class ExecutionController {
+
+    private static final Logger LOGGER = Logger.getLogger("com.carlosmedina.javareactproject.controller.ExecutionController");
 
     @Autowired
     private ExecutionJpaRepository executionJpaRepository;
@@ -44,30 +47,27 @@ public class ExecutionController {
         execution.setExecutorDNI(Long.parseLong(executorDNI));
         execution.setExecutionDate(FileUtil.getProcessDate());
 
-        LocalDate.now();
-
         try {
             FileUtil.init(multipartFile);
             ProcessFile processFile = new ProcessFile(multipartFile);
 
             // Inicia proceso de validación del archivo de entrada
-            Map<String, String> processValidation = new HashMap<>();
-            processValidation = processFile.validateFileResponse();
-            if (processValidation.get("status").equalsIgnoreCase("error")) {
-                execution.setUrlFile(FileUtil.getUrlFile("OUTPUT_WITH_ERRORS"));
+            Map<String, String> processValidation = processFile.validateFileResponse();
+            if (processValidation.get(PropertiesUtil.STATUS).equalsIgnoreCase(PropertiesUtil.ERROR)) {
+                execution.setUrlFile(FileUtil.getUrlFile(PropertiesUtil.OUTPUT_WITH_ERRORS));
                 execution.setStatusProcess("CON ERRORES");
                 this.load(execution);
-                return this.sendErrorFile(processValidation.get("message"));
+                return this.sendErrorFile(processValidation.get(PropertiesUtil.MESSAGE));
             }
 
             processFile.processInputFile();
 
-            execution.setUrlFile(FileUtil.getUrlFile("OUTPUT"));
+            execution.setUrlFile(FileUtil.getUrlFile(PropertiesUtil.OUTPUT));
             execution.setStatusProcess(FileUtil.getStatusProcess());
             this.load(execution);
-            return this.downloadOutputFile(FileUtil.getFilename("OUTPUT"));
-        } catch (IOException e) {
-            e.printStackTrace();
+            return this.downloadOutputFile(FileUtil.getFilename(PropertiesUtil.OUTPUT));
+        } catch (IOException ex) {
+            LOGGER.log(Level.INFO, ex.getMessage());
         }
         return null;
     }
@@ -94,14 +94,14 @@ public class ExecutionController {
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InputStreamResource> downloadFile(
             @RequestParam(value = "filename") String filename) throws IOException {
-        System.out.println(filename);
+        LOGGER.log(Level.INFO, filename);
         return this.downloadOutputFile(filename);
     }
 
     public ResponseEntity<InputStreamResource> sendErrorFile(String response) throws IOException {
 
-        FileUtil.saveFile(response.getBytes(StandardCharsets.UTF_8),"OUTPUT_WITH_ERRORS");
-        File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename("OUTPUT_WITH_ERRORS"));
+        FileUtil.saveFile(response.getBytes(StandardCharsets.UTF_8),PropertiesUtil.OUTPUT_WITH_ERRORS);
+        File file = new File(FileUtil.DIRECTORY + FileUtil.getFilename(PropertiesUtil.OUTPUT_WITH_ERRORS));
 
         InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
 

@@ -9,10 +9,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FileUtil {
 
@@ -20,11 +21,15 @@ public class FileUtil {
     private static String dateTimeStr;
     private static MultipartFile multipartFile;
     private static String extension;
-    public static String inputString;
-    public static String outputString;
-    public static String statusProcess;
+    private static String inputString;
+    private static String outputString;
+    private static String statusProcess;
+
+    private static final Logger LOGGER = Logger.getLogger("com.carlosmedina.javareactproject.util.FileUtil");
 
     public static final String DIRECTORY = File.separator + "TempJavaReactFolder" + File.separator;
+
+    private FileUtil() {}
 
     public static void init(MultipartFile multipartFile) throws IOException {
         FileUtil.multipartFile = multipartFile;
@@ -33,42 +38,6 @@ public class FileUtil {
         FileUtil.extension = FileUtil.findExtension();
         FileUtil.inputString = new String(multipartFile.getBytes(), StandardCharsets.UTF_8);
         FileUtil.saveFile(multipartFile.getBytes(), "INPUT");
-    }
-
-    public void setOriginalFilename(String originalFilename) {
-        this.originalFilename = originalFilename;
-    }
-
-    private String getOriginalFilename() {
-        return this.originalFilename;
-    }
-
-    public void setDateTimeStr(String dateTimeStr) {
-        this.dateTimeStr = dateTimeStr;
-    }
-
-    public String getDateTimeStr() {
-        return dateTimeStr;
-    }
-
-    public String getExtension() {
-        return extension;
-    }
-
-    public void setExtension(String extension) {
-        this.extension = extension;
-    }
-
-    public static String getInputString() {
-        return inputString;
-    }
-
-    public static void setInputString(String inputString) {
-        FileUtil.inputString = inputString;
-    }
-
-    public static String getOutputString() {
-        return outputString;
     }
 
     public static void setOutputString(String outputString) {
@@ -83,12 +52,24 @@ public class FileUtil {
         FileUtil.statusProcess = statusProcess;
     }
 
+    private static boolean isWorkDaysNumberValid(int number) {
+        return number >= 1 && number <= PropertiesUtil.MAXIMUM_WORKDAYSNUMBER;
+    }
+
+    private static boolean isItemNumberValid(int number) {
+        return number >= 1 && number <= PropertiesUtil.MAXIMUM_ITEMNUMBERS_VALUE;
+    }
+
+    private static boolean isItemWeightValid(int number) {
+        return number >= 1 && number <= PropertiesUtil.MAXIMUM_ITEMWEIGHT_VALUE;
+    }
+
     public static boolean isValidExtension() {
-        if (FileUtil.originalFilename.indexOf(".") < 0) {
+        if (FileUtil.originalFilename.indexOf('.') < 0) {
             return false;
         } else {
             String extension = FileUtil.originalFilename.substring(
-                    FileUtil.originalFilename.lastIndexOf(".") + 1);
+                    FileUtil.originalFilename.lastIndexOf('.') + 1);
 
             if (!extension.equalsIgnoreCase("txt")) {
                 return false;
@@ -102,11 +83,12 @@ public class FileUtil {
     }
 
     private static String findExtension() {
-        if (FileUtil.originalFilename.indexOf(".") < 0) {
+        if (FileUtil.originalFilename.indexOf('.') < 0) {
             return null;
         } else {
-            return FileUtil.extension = FileUtil.originalFilename.substring(
-                    FileUtil.originalFilename.lastIndexOf(".") + 1);
+            FileUtil.extension = FileUtil.originalFilename.substring(
+                    FileUtil.originalFilename.lastIndexOf('.') + 1);
+            return FileUtil.extension;
         }
     }
 
@@ -120,8 +102,6 @@ public class FileUtil {
 
     public static Path createFile(String fileType) throws IOException {
         Path path = Paths.get(DIRECTORY + FileUtil.getFilename(fileType));
-        System.out.println(Files.isDirectory(Paths.get(DIRECTORY)));
-        System.out.println(Files.notExists(path));
 
         // Verificamos si el directorio existe, si no lo creamos
         if (!Files.isDirectory(Paths.get(DIRECTORY))) {
@@ -141,28 +121,68 @@ public class FileUtil {
             if (Files.isWritable(inputFile)) {
                 Files.write(inputFile, content);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            LOGGER.log(Level.INFO, ex.getMessage());
         }
     }
 
     public static boolean hasInvalidDigits() {
-        InputStream is = null;
-        BufferedReader br = null;
+        InputStream is;
+        BufferedReader br;
+        int iterationValue = 0;
+        int itemNumbers = 0;
+        int currentItem = 1;
+        int workDaysNumber;
+        int itemWeight;
         try {
             is = FileUtil.multipartFile.getInputStream();
             br = new BufferedReader(new InputStreamReader(is));
 
             String line;
+            String firstLine = br.readLine();
+            if (firstLine == null || !FileUtil.isInteger(firstLine)) {
+                LOGGER.log(Level.INFO, "El valor obtenido para el Número de días de trabajo no es un entero");
+                return true;
+            }
+
+            workDaysNumber = Integer.parseInt(firstLine);
+
+            if (!FileUtil.isWorkDaysNumberValid(workDaysNumber)) {
+                LOGGER.log(Level.INFO, "El número de días trabajados supera el límite de: " + PropertiesUtil.MAXIMUM_WORKDAYSNUMBER);
+                return true;
+            }
+
             while ((line = br.readLine()) != null) {
+                iterationValue++;
                 // Valida que cada número en el archivo sea un entero
                 if(!FileUtil.isInteger(line)) {
                     return true;
                 }
+
+                if (iterationValue == 1) {
+                    itemNumbers = Integer.parseInt(line);
+                    if (!FileUtil.isItemNumberValid(itemNumbers)) {
+                        return true;
+                    }
+                    continue;
+                }
+
+                if (itemNumbers >= currentItem) {
+                    itemWeight = Integer.parseInt(line);
+                    if (!FileUtil.isItemWeightValid(itemWeight)) {
+                        return true;
+                    }
+                    if (itemNumbers == currentItem) {
+                        itemNumbers = 0;
+                        currentItem = 0;
+                        iterationValue = 0;
+                    }
+                    currentItem++;
+                }
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            LOGGER.log(Level.INFO, ex.getMessage());
         }
 
         return false;
@@ -198,8 +218,8 @@ public class FileUtil {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         try {
             return formatter.parse(dateInString);
-        } catch (ParseException e) {
-            e.printStackTrace();
+        } catch (ParseException ex) {
+            LOGGER.log(Level.INFO, ex.getMessage());
         }
 
         return new Date();
